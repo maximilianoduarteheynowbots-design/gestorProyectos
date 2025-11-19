@@ -1,0 +1,5 @@
+{
+  "name": "Gestor de Proyectos",
+  "description": "Una aplicación para visualizar elementos de trabajo de Azure DevOps y sus jerarquías. Los usuarios pueden ingresar un Token de Acceso Personal (PAT) para buscar sus Product Backlog Items asignados y navegar a través de sus tareas hijas.",
+  "requestFramePermissions": []
+}
