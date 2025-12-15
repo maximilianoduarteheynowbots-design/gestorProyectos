@@ -10,8 +10,9 @@ import { TaskAnalysisView } from './components/TaskAnalysisView';
 import { ProjectForecastView } from './components/ProjectForecastView';
 import { WeeklyPlannerView } from './components/WeeklyPlannerView';
 import { ProfitabilityCalculatorView } from './components/ProfitabilityCalculatorView';
+import { WeeklyHoursView } from './components/WeeklyHoursView';
 
-type View = 'dashboard' | 'taskAnalysis' | 'projection' | 'weeklyPlanner' | 'profitabilityCalculator';
+type View = 'dashboard' | 'taskAnalysis' | 'projection' | 'weeklyPlanner' | 'profitabilityCalculator' | 'weeklyHours';
 
 interface UserProfile {
     displayName: string;
@@ -448,6 +449,14 @@ const App: React.FC = () => {
                             }}
                         />
                     );
+                case 'weeklyHours':
+                    return (
+                        <WeeklyHoursView 
+                            pat={pat} 
+                            orgName={orgName} 
+                            projectName={projectName} 
+                        />
+                    );
                 case 'projection':
                     return <ProjectForecastView workItems={rootWorkItems} />;
                 case 'weeklyPlanner':
@@ -541,6 +550,7 @@ const App: React.FC = () => {
                 {hasFetchedOnce && (
                     <nav className="mb-6 bg-light-card dark:bg-dark-card p-2 rounded-lg shadow-sm flex items-center space-x-1 sm:space-x-2 flex-wrap">
                          <NavButton view="dashboard" label="Dashboard" />
+                         <NavButton view="weeklyHours" label="Horas Semanales" />
                          <NavButton view="taskAnalysis" label="Análisis de Tareas" />
                          <NavButton view="projection" label="Proyección" />
                          <NavButton view="weeklyPlanner" label="Planificador" />

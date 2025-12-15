@@ -215,7 +215,7 @@ export const TaskAnalysisView: React.FC<TaskAnalysisViewProps> = ({
 
         const totalItems = uniqueRootItems.size;
         
-        const totalInvestedHours = Array.from(taskSummaries.values()).reduce<number>((acc, curr) => acc + (curr.invested || 0), 0);
+        const totalInvestedHours = Array.from(taskSummaries.values()).reduce<number>((acc, curr: TaskSummary) => acc + (curr.invested || 0), 0);
         const avgHoursPerItem = totalItems > 0 ? parseFloat((totalInvestedHours / totalItems).toFixed(2)) : 0;
         return { totalItems, totalInvestedHours, avgHoursPerItem };
     }, [filteredItems, taskSummaries, hierarchyMap.idMap]);

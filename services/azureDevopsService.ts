@@ -129,9 +129,9 @@ export const getWorkItemDetails = async (pat: string, orgUrl: string, ids: numbe
         let detailsUrl: string;
 
         if (fields) {
-            detailsUrl = `${orgUrl}/_apis/wit/workitems?ids=${idsString}&fields=${fields.join(',')}&api-version=7.1-preview.3`;
+            detailsUrl = `${orgUrl}/_apis/wit/workitems?ids=${idsString}&fields=${fields.join(',')}&errorPolicy=Omit&api-version=7.1-preview.3`;
         } else {
-            detailsUrl = `${orgUrl}/_apis/wit/workitems?ids=${idsString}&$expand=relations&api-version=7.1-preview.3`;
+            detailsUrl = `${orgUrl}/_apis/wit/workitems?ids=${idsString}&$expand=relations&errorPolicy=Omit&api-version=7.1-preview.3`;
         }
 
         const detailsResult = await fetchAzureApi<WorkItemBatchResponse>(detailsUrl, pat, {
@@ -382,6 +382,48 @@ export const getSingleTaskDescendantHourSummary = async (pat: string, orgUrl: st
     }
     
     return { estimated: Math.round(estimated), invested: Math.round(invested) };
+};
+
+export const getLoggedHoursByDateRange = async (pat: string, orgUrl: string, projectName: string, startDate: Date, endDate: Date): Promise<WorkItem[]> => {
+    // Format dates to YYYY-MM-DD
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+
+    const wiqlUrl = `${orgUrl}/${projectName}/_apis/wit/wiql?api-version=7.1-preview.2`;
+    
+    // Select Linea items within the date range. 
+    // Note: Using Custom.Fechalinea for the date filter.
+    const query = {
+        query: `
+            SELECT [System.Id]
+            FROM WorkItems 
+            WHERE [System.TeamProject] = @project 
+            AND [System.WorkItemType] = 'Linea'
+            AND [Custom.Fechalinea] >= '${startStr}'
+            AND [Custom.Fechalinea] <= '${endStr}'
+            ORDER BY [Custom.Fechalinea] ASC
+        `
+    };
+
+    const wiqlResult = await fetchAzureApi<WiqlResponse>(wiqlUrl, pat, {
+        method: 'POST',
+        body: JSON.stringify(query)
+    });
+
+    if (!wiqlResult || !wiqlResult.workItems || wiqlResult.workItems.length === 0) {
+        return [];
+    }
+
+    const ids = wiqlResult.workItems.map(item => item.id);
+    
+    // Fetch details including Parent to give context if needed
+    return getWorkItemDetails(pat, orgUrl, ids, [
+        'System.Title',
+        'System.AssignedTo',
+        'Custom.Horas',
+        'Custom.Fechalinea',
+        'System.Parent'
+    ]);
 };
 
 

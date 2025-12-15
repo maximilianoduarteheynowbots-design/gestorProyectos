@@ -42,13 +42,15 @@ export const WeeklyPlannerView: React.FC<{ workItems: WorkItem[] }> = ({ workIte
             .sort((a, b) => a.fields['System.Title'].localeCompare(b.fields['System.Title']));
     }, [workItems, selectedDeveloper]);
 
-    // Auto-planning logic
+    // Auto-planning logic (Initial load only)
     useEffect(() => {
         if (!selectedDeveloper) {
             setPlan(new Map());
             return;
         }
 
+        // Only generate a new plan if we don't have one or if the dev changed significantly
+        // Note: For a smoother UX, we accept overwrite on dev change.
         const newPlan: Plan = new Map();
         devProjects.forEach(project => {
             let pendingHours = (project.fields['Custom.Hspendientes'] as number) || 0;
@@ -72,7 +74,6 @@ export const WeeklyPlannerView: React.FC<{ workItems: WorkItem[] }> = ({ workIte
     
     const maxWeeks = useMemo(() => {
         if (plan.size === 0) return 4; // Default view
-        // FIX: Explicitly type `schedule` as `number[]` to resolve an inference issue where it was treated as `unknown`.
         const lengths = Array.from(plan.values()).map((schedule: number[]) => schedule.length);
         return Math.max(4, ...lengths);
     }, [plan]);
@@ -86,47 +87,25 @@ export const WeeklyPlannerView: React.FC<{ workItems: WorkItem[] }> = ({ workIte
         const newHours = parseInt(hoursStr, 10);
         const validatedHours = isNaN(newHours) || newHours < 0 ? 0 : newHours;
 
-        // FIX: Explicitly type `currentPlan` to resolve type inference issues where map values were treated as 'unknown'.
-        // This ensures correct types for schedules when calculating lengths and spreading into new arrays.
         setPlan((currentPlan: Plan) => {
             const newPlan = new Map(currentPlan);
-            const project = devProjects.find(p => p.id === projectId);
-            if (!project) return currentPlan;
-
-            const originalPending = (project.fields['Custom.Hspendientes'] as number) || 0;
-            const weeklyLoad = (project.fields['Custom.Cargasemanal'] as number) || 0;
-
+            
+            // Get current schedule or empty array
             let currentSchedule = [...(newPlan.get(projectId) || [])];
             
-            // Ensure schedule has enough weeks
+            // Ensure schedule has enough slots up to the edited week
             while(currentSchedule.length <= weekIndex) {
                 currentSchedule.push(0);
             }
 
-            // Update the changed week
+            // Update ONLY the specific week, without re-balancing future weeks automatically.
+            // This ensures manual edits persist exactly as typed.
             currentSchedule[weekIndex] = validatedHours;
             
-            // Re-balance the rest of the schedule
-            const totalPlannedSoFar = currentSchedule.slice(0, weekIndex + 1).reduce((sum, h) => sum + h, 0);
-            let remainingToPlan = originalPending - totalPlannedSoFar;
-
-            let rebalancedTail: number[] = [];
-            if (remainingToPlan > 0 && weeklyLoad > 0) {
-                while(remainingToPlan > 0) {
-                    const hoursForWeek = Math.min(remainingToPlan, weeklyLoad);
-                    rebalancedTail.push(hoursForWeek);
-                    remainingToPlan -= hoursForWeek;
-                }
-            }
-
-            const finalSchedule = [...currentSchedule.slice(0, weekIndex + 1), ...rebalancedTail];
+            // Optional: Clean up trailing zeros if you want to keep the array tight, 
+            // but keeping them is fine for stability.
             
-            // Trim trailing zeros for cleanliness
-            while (finalSchedule.length > 0 && finalSchedule[finalSchedule.length - 1] === 0) {
-                finalSchedule.pop();
-            }
-
-            newPlan.set(projectId, finalSchedule);
+            newPlan.set(projectId, currentSchedule);
             return newPlan;
         });
     };
